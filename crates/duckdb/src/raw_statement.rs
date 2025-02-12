@@ -81,11 +81,11 @@ impl RawStatement {
 
     #[inline]
     pub fn step(&self) -> Option<StructArray> {
-        self.result?;
+        let out = self.result?;
         unsafe {
             let mut arrays = FFI_ArrowArray::empty();
             if ffi::duckdb_query_arrow_array(
-                self.result_unwrap(),
+                out,
                 &mut std::ptr::addr_of_mut!(arrays) as *mut _ as *mut ffi::duckdb_arrow_array,
             )
             .ne(&ffi::DuckDBSuccess)
@@ -99,7 +99,7 @@ impl RawStatement {
 
             let mut schema = FFI_ArrowSchema::empty();
             if ffi::duckdb_query_arrow_schema(
-                self.result_unwrap(),
+                out,
                 &mut std::ptr::addr_of_mut!(schema) as *mut _ as *mut ffi::duckdb_arrow_schema,
             ) != ffi::DuckDBSuccess
             {
@@ -175,7 +175,7 @@ impl RawStatement {
 
             let arrow2_field =
                 arrow2::ffi::import_field_from_c(&ffi_arrow2_schema).expect("Failed to import arrow2 Field from C");
-            let import_arrow2_array = arrow2::ffi::import_array_from_c(ffi_arrow2_array, arrow2_field.data_type);
+            let import_arrow2_array = arrow2::ffi::import_array_from_c(ffi_arrow2_array, arrow2_field.dtype);
 
             if let Err(err) = import_arrow2_array {
                 // When array is empty, import_array_from_c returns error with message
@@ -260,6 +260,7 @@ impl RawStatement {
         unsafe {
             let mut out: ffi::duckdb_arrow = ptr::null_mut();
             let rc = ffi::duckdb_execute_prepared_arrow(self.ptr, &mut out);
+            println!("error code: {}", rc);
             result_from_duckdb_arrow(rc, out)?;
 
             let rows_changed = ffi::duckdb_arrow_rows_changed(out);
